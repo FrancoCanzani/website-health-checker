@@ -24,29 +24,50 @@ namespace HealthChecker.Controllers
                 return BadRequest("URL parameter is required");
             }
 
-            // We'll implement the health check logic in the next step
-            bool isHealthy = await CheckWebsiteHealth(url);
-
-            return Ok(new { url = url, isHealthy = isHealthy });
+            var healthCheckResult = await CheckWebsiteHealth(url);
+            return Ok(healthCheckResult);
         }
 
-        private async Task<bool> CheckWebsiteHealth(string url)
+        private async Task<object> CheckWebsiteHealth(string url)
         {
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                client.Timeout = TimeSpan.FromSeconds(30); // Set a timeout
+                client.Timeout = TimeSpan.FromSeconds(30);
 
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var response = await client.GetAsync(url);
-                return response.IsSuccessStatusCode;
+                stopwatch.Stop();
+
+                return new
+                {
+                    Url = url,
+                    IsHealthy = response.IsSuccessStatusCode,
+                    StatusCode = (int)response.StatusCode,
+                    ResponseTime = stopwatch.ElapsedMilliseconds,
+                    ContentType = response.Content.Headers.ContentType?.ToString(),
+                    ServerHeader = response.Headers.Server.ToString(),
+                    ContentLength = response.Content.Headers.ContentLength,
+                    LastModified = response.Content.Headers.LastModified?.ToString()
+                };
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
-                return false;
+                return new
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    Error = ex.Message
+                };
             }
             catch (TaskCanceledException)
             {
-                return false; // Timeout occurred
+                return new
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    Error = "Request timed out"
+                };
             }
         }
     }
