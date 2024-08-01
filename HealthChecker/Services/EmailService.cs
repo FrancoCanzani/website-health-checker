@@ -1,14 +1,14 @@
 ﻿using MailKit.Net.Smtp;
 using MimeKit;
 using System;
+using System.Threading.Tasks;
 
 namespace HealthChecker.Services
 {
     public interface IEmailService
     {
-        void Send(string receiver, string subject, string body);
+        Task SendAsync(string receiver, string subject, string body);
     }
-
     public class EmailService : IEmailService
     {
         private readonly string _smtpHost;
@@ -25,7 +25,7 @@ namespace HealthChecker.Services
             _smtpPass = "96923e7eabdf0c";
         }
 
-        public void Send(string receiver, string subject, string body)
+        public async Task SendAsync(string receiver, string subject, string body)
         {
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress("Health Check Alert", "sender@example.com"));
@@ -41,9 +41,9 @@ namespace HealthChecker.Services
             {
                 try
                 {
-                    client.Connect(_smtpHost, _smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
-                    client.Authenticate(_smtpUser, _smtpPass);
-                    client.Send(message);
+                    await client.ConnectAsync(_smtpHost, _smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(_smtpUser, _smtpPass);
+                    await client.SendAsync(message);
                 }
                 catch (Exception ex)
                 {
@@ -52,7 +52,7 @@ namespace HealthChecker.Services
                 }
                 finally
                 {
-                    client.Disconnect(true);
+                    await client.DisconnectAsync(true);
                     client.Dispose();
                 }
             }

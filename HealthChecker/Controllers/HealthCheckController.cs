@@ -17,7 +17,6 @@ namespace HealthChecker.Controllers
         {
             _httpClientFactory = httpClientFactory;
             _emailService = emailService;
-
         }
 
         [HttpGet]
@@ -41,13 +40,9 @@ namespace HealthChecker.Controllers
 
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var response = await client.GetAsync(url);
-
                 stopwatch.Stop();
 
-                _emailService.Send("francocanzani@gmail.com", "Site Down", $"The site {url} is down.");
-                
-
-                return new
+                var result = new
                 {
                     Url = url,
                     CheckDate = response.Headers.Date,
@@ -59,9 +54,17 @@ namespace HealthChecker.Controllers
                     ContentLength = response.Content.Headers.ContentLength,
                     LastModified = response.Content.Headers.LastModified?.ToString()
                 };
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    await _emailService.SendAsync("francocanzani@gmail.com", "Site Down", $"The site {url} is down. Status Code: {response.StatusCode}");
+                }
+
+                return result;
             }
             catch (HttpRequestException ex)
             {
+                await _emailService.SendAsync("francocanzani@gmail.com", "Site Down", $"The site {url} is down. Error: {ex.Message}");
                 return new
                 {
                     Url = url,
@@ -71,6 +74,7 @@ namespace HealthChecker.Controllers
             }
             catch (TaskCanceledException)
             {
+                await _emailService.SendAsync("francocanzani@gmail.com", "Site Down", $"The site {url} is down. Error: Request timed out");
                 return new
                 {
                     Url = url,
