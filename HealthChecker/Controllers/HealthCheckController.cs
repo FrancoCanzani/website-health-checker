@@ -2,6 +2,7 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using HealthChecker.Services;
 
 namespace HealthChecker.Controllers
 {
@@ -10,10 +11,13 @@ namespace HealthChecker.Controllers
     public class HealthCheckController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IEmailService _emailService;
 
-        public HealthCheckController(IHttpClientFactory httpClientFactory)
+        public HealthCheckController(IHttpClientFactory httpClientFactory, IEmailService emailService)
         {
             _httpClientFactory = httpClientFactory;
+            _emailService = emailService;
+
         }
 
         [HttpGet]
@@ -37,11 +41,16 @@ namespace HealthChecker.Controllers
 
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var response = await client.GetAsync(url);
+
                 stopwatch.Stop();
+
+                _emailService.Send("francocanzani@gmail.com", "Site Down", $"The site {url} is down.");
+                
 
                 return new
                 {
                     Url = url,
+                    CheckDate = response.Headers.Date,
                     IsHealthy = response.IsSuccessStatusCode,
                     StatusCode = (int)response.StatusCode,
                     ResponseTime = stopwatch.ElapsedMilliseconds,

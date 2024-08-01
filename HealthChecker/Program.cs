@@ -1,9 +1,14 @@
+using HealthChecker.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient();
+
+// Register the EmailService
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 var app = builder.Build();
 
